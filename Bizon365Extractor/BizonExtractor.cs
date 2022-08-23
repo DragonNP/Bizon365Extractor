@@ -1,4 +1,6 @@
-﻿namespace Bizon365Extractor
+﻿using System.Text;
+
+namespace Bizon365Extractor
 {
     /// <summary>
     /// Статический класс для извлечения ссылки на вебинар из сервиса Bizon365 
@@ -19,7 +21,7 @@
             string html_page = await GetHtmlResponse(url, sid);
 
             // Логика извечения ссылки из страницы
-            
+
             return html_page;
         }
 
@@ -30,19 +32,26 @@
         /// <returns>Sid cookie</returns>
         private static async Task<string> GetSidAsync(string url)
         {
-            HttpClient client = new();
-
             if (url[url.Length - 1] != '/') url += "/";
             string url_authorize = url + "authorize";
 
-            var values = new Dictionary<string, string>
-  {
-      { "host",  "start.bizon365.ru"}
-  };
+            string body = "{ \"username\": \"test\", " +
+                "\"email\": \"test@email.com\", " +
+                "\"phone\": \"+71234567890\", " +
+                "\"custom1\": \"test\", " +
+                "\"referer\": \"test\", " +
+                "\"param1\": \"test\", " +
+                "\"param2\": \"test\", " +
+                "\"param3\": \"test\", " +
+                "\"cu1\": \"test\", " +
+                "\"sup\": \"test\" }";
 
-            var content = new FormUrlEncodedContent(values);
+            HttpClient client = new();
 
-            var response = await client.PostAsync(url_authorize, content);
+            var requestMessage = new HttpRequestMessage(HttpMethod.Post, url_authorize);
+            requestMessage.Headers.Add("host", "start.bizon365.ru");
+            requestMessage.Content = new StringContent(body, Encoding.UTF8, "application/json");
+            var response = await client.SendAsync(requestMessage);
 
             string sid_cookie = "";
             foreach (var item in response.Headers.GetValues("Set-Cookie"))
