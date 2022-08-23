@@ -1,4 +1,5 @@
 ﻿using System.Text;
+using Newtonsoft.Json.Linq;
 
 namespace Bizon365Extractor
 {
@@ -18,11 +19,102 @@ namespace Bizon365Extractor
             string sid = GetSidAsync(url).Result;
 
             // Получаем HTML страницу
-            string html_page = await GetHtmlResponse(url, sid);
+            //string html = await GetHtmlResponse(url, sid);
 
             // Логика извечения ссылки из страницы
+            InitData initData = await LoadInitData(url, sid);
+            
+            string sid_special = await GetSidForLink(initData);
 
-            return html_page;
+            return await Final(initData, sid_special);
+        }
+
+        private static async Task<InitData> LoadInitData(string url, string sid)
+        {
+            string url_loadInitData = url + "/loadInitData";
+
+            HttpClient client = new();
+
+            var requestMessage = new HttpRequestMessage(HttpMethod.Post, url_loadInitData);
+            requestMessage.Headers.Add("host", "start.bizon365.ru");
+            requestMessage.Headers.Add("cookie", $"sid={sid}");
+
+
+            requestMessage.Content = new StringContent("{}", Encoding.UTF8, "application/json");
+            var response = await client.SendAsync(requestMessage);
+
+            JObject json = JObject.Parse(await response.Content.ReadAsStringAsync());
+            return new InitData(json);
+        }
+
+        private static async Task<string> GetSidForLink(InitData initData)
+        {
+            string url = "https://ws5.bizon365.ru/socket.io/?";
+            url += $"ssid={initData.Ssid}&";
+            url += $"ssign={initData.Ssign}&";
+            url += $"roomid={initData.RoomId}&";
+            url += $"group={initData.Groupid}&";
+            url += "transport=polling";
+
+            HttpClient client = new();
+
+            var requestMessage = new HttpRequestMessage(HttpMethod.Get, url);
+            requestMessage.Headers.Add("host", "ws5.bizon365.ru");
+            var response = await client.SendAsync(requestMessage);
+
+            string content = await response.Content.ReadAsStringAsync();
+
+            while (content[0] != '{')
+                content = content.Remove(0, 1);
+
+            JToken? sid = JObject.Parse(content)["sid"];
+            if (sid == null)
+                throw new Exception("Sid не найден. " + content);
+
+            return sid.ToString();
+        }
+
+        private static async Task<string> Final(InitData initData, string sid)
+        {
+            string url = "https://ws5.bizon365.ru/socket.io/?";
+            url += $"ssid={initData.Ssid}&";
+            url += $"ssign={initData.Ssign}&";
+            url += $"roomid={initData.RoomId}&";
+            url += $"group={initData.Groupid}&";
+            url += $"sid={sid}&";
+            url += "transport=polling";
+
+            /*            HttpClient client = new();
+
+                        var requestMessage = new HttpRequestMessage(HttpMethod.Get, url);
+                        requestMessage.Headers.Add("host", "ws5.bizon365.ru");
+                        var response = await client.SendAsync(requestMessage);
+
+                        string content = await response.Content.ReadAsStringAsync();
+
+                        while (content[0] != '{')
+                            content = content.Remove(0, 1);*/
+
+            string content = "";
+            using (var client = new HttpClient())
+            {
+                client.Timeout = TimeSpan.FromMilliseconds(Timeout.Infinite);
+                var request = new HttpRequestMessage(HttpMethod.Get, url);
+                using (var response = await client.SendAsync(
+                    request,
+                    HttpCompletionOption.ResponseHeadersRead))
+                {
+                    using (var body = await response.Content.ReadAsStreamAsync())
+                    using (var reader = new StreamReader(body))
+                        while (!reader.EndOfStream)
+                            content += reader.ReadLine();
+                }
+            }
+            while (content[0] != '{')
+                content = content.Remove(0, 1);
+
+            //JObject json = JObject.Parse(content);
+            return content;
         }
 
         /// <summary>
