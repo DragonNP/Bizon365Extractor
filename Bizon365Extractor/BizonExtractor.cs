@@ -1,4 +1,6 @@
-﻿using System.Text;
+﻿using System.IO.Compression;
+using System.Text;
+using System.Text.RegularExpressions;
 using Newtonsoft.Json.Linq;
 
 namespace Bizon365Extractor
@@ -18,15 +20,12 @@ namespace Bizon365Extractor
             // Получаем специальный cookie
             string sid = GetSidAsync(url).Result;
 
-            // Получаем HTML страницу
-            //string html = await GetHtmlResponse(url, sid);
-
             // Логика извечения ссылки из страницы
             InitData initData = await LoadInitData(url, sid);
-            
             string sid_special = await GetSidForLink(initData);
+            Room room = await Final(initData, sid_special);
 
-            return await Final(initData, sid_special);
+            return room.HangoutsUrl;
         }
 
         private static async Task<InitData> LoadInitData(string url, string sid)
@@ -74,7 +73,7 @@ namespace Bizon365Extractor
             return sid.ToString();
         }
 
-        private static async Task<string> Final(InitData initData, string sid)
+        private static async Task<Room> Final(InitData initData, string sid)
         {
             string url = "https://ws5.bizon365.ru/socket.io/?";
             url += $"ssid={initData.Ssid}&";
@@ -84,37 +83,23 @@ namespace Bizon365Extractor
             url += $"sid={sid}&";
             url += "transport=polling";
 
-            /*            HttpClient client = new();
+            HttpClient client = new();
 
-                        var requestMessage = new HttpRequestMessage(HttpMethod.Get, url);
-                        requestMessage.Headers.Add("host", "ws5.bizon365.ru");
-                        var response = await client.SendAsync(requestMessage);
+            var requestMessage = new HttpRequestMessage(HttpMethod.Get, url);
+            requestMessage.Headers.Add("host", "ws5.bizon365.ru");
+            var response = await client.SendAsync(requestMessage);
 
-                        string content = await response.Content.ReadAsStringAsync();
+            string content = await response.Content.ReadAsStringAsync();
 
-                        while (content[0] != '{')
-                            content = content.Remove(0, 1);*/
+            content = RemoveStrangeSymbols(content);
 
-            string content = "";
-            using (var client = new HttpClient())
-            {
-                client.Timeout = TimeSpan.FromMilliseconds(Timeout.Infinite);
-                var request = new HttpRequestMessage(HttpMethod.Get, url);
-                using (var response = await client.SendAsync(
-                    request,
-                    HttpCompletionOption.ResponseHeadersRead))
-                {
-                    using (var body = await response.Content.ReadAsStreamAsync())
-                    using (var reader = new StreamReader(body))
-                        while (!reader.EndOfStream)
-                            content += reader.ReadLine();
-                }
-            }
             while (content[0] != '{')
                 content = content.Remove(0, 1);
+            content = content.Remove(content.Length - 1, 1);
 
-            //JObject json = JObject.Parse(content);
-            return content;
+            JObject json = JObject.Parse(content);
+            Room room = Room.FromJson((JObject)json["room"]);
+            return room;
         }
 
         /// <summary>
@@ -158,21 +143,24 @@ namespace Bizon365Extractor
             return sid_cookie;
         }
 
-        /// <summary>
-        /// Асинхронный метод подает запрос на страницу вебинара
-        /// </summary>
-        /// <param name="url">Ссылка на идущий вебинар</param>
-        /// <param name="sid">Специальный авторизованный cookie</param>
-        /// <returns>HTML страница вебинара</returns>
-        private static async Task<string> GetHtmlResponse(string url, string sid)
+        private static string RemoveStrangeSymbols(string line)
         {
-            HttpClient client = new();
+            string result = "";
 
-            var requestMessage = new HttpRequestMessage(HttpMethod.Get, url);
-            requestMessage.Headers.Add("cookie", $"sid={sid}");
-            var responseMessage = await client.SendAsync(requestMessage);
+            foreach (char symbol in line)
+            {
+                char[] chars = new char[] { '{', '}', ',', '.', '/', '\\', '!', '@', '#', '$', '%', '^', '&', '*', '\'', '\"', ';', '_', '(', ')', ':', '|', '[', ']' };
 
-            return await responseMessage.Content.ReadAsStringAsync();
+                if (chars.Contains(symbol) || 
+                    (symbol >= 'А' && symbol <= 'Я') || (symbol >= 'а' && symbol <= 'я') || 
+                    (symbol >= 'A' && symbol <= 'Z') || (symbol >= 'a' && symbol <= 'z') ||
+                    (symbol >= '0' && symbol <= '9') || symbol == ' ')
+                {
+                    result += symbol;
+                }
+            }
+            result = result.Replace("4042", "");
+            return result;
         }
     }
 }
