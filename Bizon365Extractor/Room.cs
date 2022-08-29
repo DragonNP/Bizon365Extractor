@@ -1,9 +1,5 @@
 ﻿using Newtonsoft.Json.Linq;
-using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Bizon365Extractor
 {
@@ -12,94 +8,126 @@ namespace Bizon365Extractor
         /// <summary>
         /// Название вебинара
         /// </summary>
-        public string Title { get; }
+        public string Title { get; private set; } = "";
 
         /// <summary>
         /// Дата начала
         /// </summary>
-        public DateTime Date { get; }
+        public DateTime Date { get; private set; } = new();
 
         /// <summary>
         /// Ссылка на вебинар
         /// </summary>
-        public string HangoutsUrl { get; }
+        public string HangoutsUrl { get; private set; } = "";
 
         /// <summary>
         /// Баннеры на вебинаре
         /// </summary>
-        public List<Banner> Banners { get; }
+        public List<Banner> Banners { get; private set; } = new();
 
         /// <summary>
         /// Файлы
         /// </summary>
-        public List<File> Files { get; }
+        public List<File> Files { get; private set; } = new();
+
+        /// <summary>
+        /// Музыка
+        /// </summary>
+        public List<string> MusicUrls { get; private set; } = new();
 
         /// <summary>
         /// Автор создателя вебинара
         /// </summary>
-        public string Author { get; }
+        public string Author { get; private set; } = "";
 
         /// <summary>
         /// Привественное сообщение в чате
         /// </summary>
-        public string WelcomeMsg { get; }
+        public string WelcomeMsg { get; private set; } = "";
 
-        private Room(string title, DateTime date, string hangoutsUrl, List<Banner> banners, List<File> files, string author, string welcomeMsg)
-        {
-            Title = title;
-            Date = date;
-            HangoutsUrl = hangoutsUrl;
-            Banners = banners;
-            Files = files;
-            Author = author;
-            WelcomeMsg = welcomeMsg;
-        }
+        /// <summary>
+        /// Пользовательская галлерея
+        /// </summary>
+        public List<string> UserGalleryUrl { get; private set; } = new();
 
         public static Room FromJson(JObject json)
         {
-            string title, hangoutsUrl, author, welcomeMsg;
-            DateTime date = new();
-            List<Banner> banners = new();
-            List<File> files = new();
+            Console.WriteLine(json.ToString());
 
-            if (json["title"] != null)
-                title = json["title"].ToString();
-            else
-                throw new Exception("title не найден " + json.ToString());
+            Room room = new();
+            JToken? value;
 
-            if (json["hangoutsUrl"] != null)
+            value = json["title"];
+            if (value != null)
             {
-                hangoutsUrl = json["hangoutsUrl"].ToString();
+                room.Title = value.ToString();
+            }
 
-                if (hangoutsUrl.Contains("BizonStream: "))
+            value = json["date"];
+            if (value != null)
+            {
+                room.Date = DateTime.ParseExact(value.ToString().Replace("T", " ").Replace("Z", ""),
+                    "yyyyMMdd HH:mm:ss.fff",
+                    System.Globalization.CultureInfo.InvariantCulture);
+            }
+
+            value = json["hangoutsUrl"];
+            if (value != null)
+            {
+                room.HangoutsUrl = value.ToString();
+
+                value = json["name"];
+                if (room.HangoutsUrl.Contains("BizonStream: ") && value != null)
                 {
-                    string groupId = json["name"].ToString().Split(':')[0];
-                    hangoutsUrl = ConvertBizonVideo(hangoutsUrl, groupId);
+                    string groupId = value.ToString().Split(':')[0];
+                    room.HangoutsUrl = ConvertBizonVideo(room.HangoutsUrl, groupId);
                 }
             }
-            else
-                throw new Exception("hangoutsUrl не найден " + json.ToString());
 
-            if (json["author"] != null)
-                author = json["author"].ToString();
-            else
-                throw new Exception("author не найден " + json.ToString());
+            value = json["banners"];
+            if (value != null)
+            {
+                foreach (var banner_json in JArray.Parse(value.ToString()))
+                    room.Banners.Add(Banner.FromJson((JObject)banner_json));
+            }
 
-            if (json["welcomemsg"] != null)
-                welcomeMsg = json["welcomemsg"].ToString();
-            else
-                throw new Exception("welcomemsg не найден " + json.ToString());
+            value = json["files"];
+            if (value != null)
+            {
+                foreach (var file_json in JArray.Parse(value.ToString()))
+                    room.Files.Add(File.FromJson((JObject)file_json));
+            }
 
-            /*if (json["date"] != null)
-                date = DateTime.Parse(json["date"].ToString().Replace("T", " ").Replace("Z", " "));
-            else
-                throw new Exception("date не найден " + json.ToString());*/
+            value = json["music"];
+            if (value != null)
+            {
+                foreach (var music_json in JArray.Parse(value.ToString()))
+                {
+                    value = music_json["url"];
+                    if (value == null) continue;
+                    room.MusicUrls.Add(value.ToString());
+                }
+            }
 
-            // Banners
+            value = json["author"];
+            if (value != null)
+                room.Author = value.ToString();
 
-            // Files
+            value = json["welcomemsg"];
+            if (value != null)
+                room.WelcomeMsg = value.ToString();
 
-            return new Room(title, date, hangoutsUrl, banners, files, author, welcomeMsg);
+            value = json["userGallery"];
+            if (value != null)
+            {
+                foreach (var gallery_json in JArray.Parse(value.ToString()))
+                {
+                    value = gallery_json["url"];
+                    if (value == null) continue;
+                    room.UserGalleryUrl.Add(value.ToString());
+                }
+            }
+            return room;
         }
 
         private static string ConvertBizonVideo(string hangoutsUrl, string groupId)
@@ -110,26 +138,51 @@ namespace Bizon365Extractor
 
     public class File
     {
-        public string Name { get; }
-        public string Title { get; }
+        public string Url { get; private set; } = "";
+        public string Title { get; private set; } = "";
 
-        public File FromJson(JObject json)
+        public static File FromJson(JObject json)
         {
-            throw new NotImplementedException();
+            File file = new();
+            JToken? value;
+
+            value = json["url"];
+            if (value != null)
+                file.Url = value.ToString();
+
+            value = json["title"];
+            if (value != null)
+                file.Title = value.ToString();
+
+            return file;
         }
 
     }
 
     public class Banner
     {
-        public string Url { get; }
-        public string Title { get; }
+        public string Url { get; private set; } = "";
+        public string Title { get; private set; } = "";
+        public string Image { get; private set; } = "";
 
-        public string Image { get; }
-
-        public Banner FromJson(JObject json)
+        public static Banner FromJson(JObject json)
         {
-            throw new NotImplementedException();
+            Banner banner = new();
+            JToken? value;
+
+            value = json["url"];
+            if (value != null)
+                banner.Url = value.ToString();
+
+            value = json["title"];
+            if (value != null)
+                banner.Title = value.ToString();
+
+            value = json["image"];
+            if (value != null)
+                banner.Image = value.ToString();
+
+            return banner;
         }
     }
 }

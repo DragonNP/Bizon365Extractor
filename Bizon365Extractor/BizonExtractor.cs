@@ -1,6 +1,4 @@
-﻿using System.IO.Compression;
-using System.Text;
-using System.Text.RegularExpressions;
+﻿using System.Text;
 using Newtonsoft.Json.Linq;
 
 namespace Bizon365Extractor
@@ -15,7 +13,7 @@ namespace Bizon365Extractor
         /// </summary>
         /// <param name="url">Ссылка на идущий вебинар</param>
         /// <returns>Ссылка на вебинар в других виеохостингах (YouTube и т.д.)</returns>
-        public static async Task<string> ExtractLink(string url)
+        public static async Task<Room> Extract(string url)
         {
             // Получаем специальный cookie
             string sid = GetSidAsync(url).Result;
@@ -25,7 +23,7 @@ namespace Bizon365Extractor
             string sid_special = await GetSidForLink(initData);
             Room room = await Final(initData, sid_special);
 
-            return room.HangoutsUrl;
+            return room;
         }
 
         private static async Task<InitData> LoadInitData(string url, string sid)
@@ -98,7 +96,10 @@ namespace Bizon365Extractor
             content = content.Remove(content.Length - 1, 1);
 
             JObject json = JObject.Parse(content);
-            Room room = Room.FromJson((JObject)json["room"]);
+            JToken? room_json = json["room"];
+
+            if (room_json == null) return new Room();
+            Room room = Room.FromJson((JObject)room_json);
             return room;
         }
 
