@@ -46,14 +46,12 @@ namespace Bizon365Extractor
         public string WelcomeMsg { get; private set; } = "";
 
         /// <summary>
-        /// Пользовательская галлерея
+        /// Пользовательская галерея
         /// </summary>
         public List<string> UserGalleryUrl { get; private set; } = new();
 
         public static Room FromJson(JObject json)
         {
-            Console.WriteLine(json.ToString());
-
             Room room = new();
             JToken? value;
 
