@@ -7,38 +7,51 @@ namespace TelegramBot
 {
     class Program
     {
-        const string TELEGRAM_TOKEN = "5799113925:AAGqQGN-Wjxnb-rmCPyl9nOd6wrDkcfGddo";
-
-        static ITelegramBotClient bot = new TelegramBotClient(TELEGRAM_TOKEN);
+        static ITelegramBotClient bot;
         public static async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
         {
-            // Некоторые действия
-            Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(update));
             if (update.Type == Telegram.Bot.Types.Enums.UpdateType.Message)
             {
                 var message = update.Message;
-                if (message.Text.ToLower() == "/start")
+                string text = message.Text;
+                if (text.ToLower() == "/start")
                 {
-                    await botClient.SendTextMessageAsync(message.Chat, "Добро пожаловать на борт, добрый путник!");
+                    await botClient.SendTextMessageAsync(message.Chat, "Привет! Отправте мне ссылку на идущий вебинар bizon365 и получите ссылку на YouTube");
                     return;
                 }
+                else if (IsURL(FormatURL(text.ToLower())))
+                {
+                    string url = FormatURL(text);
+                    Room room = BizonExtractor.Extract(url).Result;
 
-                string url = message.Text;
-                Room room = BizonExtractor.Extract(url).Result;
+                    await botClient.SendTextMessageAsync(message.Chat, ConvertRoomToText(room), Telegram.Bot.Types.Enums.ParseMode.Html, null, true);
+                }
+                else
+                {
+                    await botClient.SendTextMessageAsync(message.Chat, "Пожалуйста, отправте ссылку на bizon365 ");
+                }
 
-                await botClient.SendTextMessageAsync(message.Chat, ConvertRoomToText(room), Telegram.Bot.Types.Enums.ParseMode.Html,null,true);
             }
         }
 
         public static async Task HandleErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)
         {
-            // Некоторые действия
             Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(exception));
         }
 
 
         static void Main(string[] args)
         {
+            string? token = Environment.GetEnvironmentVariable("TELEGRAM_TOKEN");
+
+            if (token == null)
+            {
+                Console.WriteLine("Пожалуйста, укажите TELEGRAM_TOKEN");
+                return;
+            }
+
+            bot = new TelegramBotClient(token);
+
             Console.WriteLine("Запущен бот " + bot.GetMeAsync().Result.FirstName);
 
             var cts = new CancellationTokenSource();
@@ -68,6 +81,29 @@ namespace TelegramBot
             // UserGallery
 
             string text = $"<b>{name}</b>\n\n<b>Автор:</b> {author}\n<b>Дата проведения:</b> {date}\n<b>Ссылка на вебинар:</b> {link}";
+
+            return text;
+        }
+
+        private static bool IsURL(string text)
+        {
+
+            if (!text.StartsWith("https://start.bizon365.ru"))
+                return false;
+
+            return true;
+        }
+
+        private static string FormatURL(string url)
+        {
+            string text = url;
+
+            if (!text.StartsWith("http://") || !text.StartsWith("https://"))
+            {
+                text = text.Replace("https://", "");
+                text = text.Replace("http://", "");
+                text = "https://" + text;
+            }
 
             return text;
         }

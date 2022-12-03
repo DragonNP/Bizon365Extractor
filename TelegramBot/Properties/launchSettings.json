@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "TelegramBot": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "TELEGRAM_TOKEN": "5799113925:AAGqQGN-Wjxnb-rmCPyl9nOd6wrDkcfGddo"
+      }
+    }
+  }
+}
