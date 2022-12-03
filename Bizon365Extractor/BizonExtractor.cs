@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Security.Cryptography;
+using System.Text;
 using Newtonsoft.Json.Linq;
 
 namespace Bizon365Extractor
@@ -8,6 +9,7 @@ namespace Bizon365Extractor
     /// </summary>
     public static class BizonExtractor
     {
+
         /// <summary>
         /// Асинхронный метод извлекающий ссылку на вебинар
         /// </summary>
@@ -15,25 +17,37 @@ namespace Bizon365Extractor
         /// <returns>Ссылка на вебинар в других виеохостингах (YouTube и т.д.)</returns>
         public static async Task<Room> Extract(string url)
         {
+            if (!IsValidURL(url))
+                return new Room();
+
+            string host = url.Split('/')[2];
+
             // Получаем специальный cookie
             string sid = GetSidAsync(url).Result;
 
             // Логика извечения ссылки из страницы
-            InitData initData = await LoadInitData(url, sid);
+            InitData initData = await LoadInitData(url, sid, host);
             string sid_special = await GetSidForLink(initData);
-            Room room = await Final(initData, sid_special);
+            Room room = await GetWs5Bizon(initData, sid_special);
 
             return room;
         }
 
-        private static async Task<InitData> LoadInitData(string url, string sid)
+        private static bool IsValidURL(string url)
+        {
+            if (url == null)
+                return false;
+            return true;
+        }
+
+        private static async Task<InitData> LoadInitData(string url, string sid, string host)
         {
             string url_loadInitData = url + "/loadInitData";
 
             HttpClient client = new();
 
             var requestMessage = new HttpRequestMessage(HttpMethod.Post, url_loadInitData);
-            requestMessage.Headers.Add("host", "start.bizon365.ru");
+            requestMessage.Headers.Add("host", host);
             requestMessage.Headers.Add("cookie", $"sid={sid}");
 
 
@@ -71,7 +85,7 @@ namespace Bizon365Extractor
             return sid.ToString();
         }
 
-        private static async Task<Room> Final(InitData initData, string sid)
+        private static async Task<Room> GetWs5Bizon(InitData initData, string sid)
         {
             string url = "https://ws5.bizon365.ru/socket.io/?";
             url += $"ssid={initData.Ssid}&";
@@ -141,6 +155,7 @@ namespace Bizon365Extractor
                     break;
                 }
             }
+
             return sid_cookie;
         }
 
@@ -150,7 +165,7 @@ namespace Bizon365Extractor
 
             foreach (char symbol in line)
             {
-                char[] chars = new char[] { '{', '}', ',', '.', '/', '\\', '!', '@', '#', '$', '%', '^', '&', '*', '\'', '\"', ';', '_', '(', ')', ':', '|', '[', ']' };
+                char[] chars = new char[] { '{', '}', ',', '.', '/', '\\', '!', '@', '#', '$', '%', '^', '&', '*', '\'', '\"', ';', '_', '(', ')', ':', '|', '[', ']', '-' };
 
                 if (chars.Contains(symbol) || 
                     (symbol >= 'А' && symbol <= 'Я') || (symbol >= 'а' && symbol <= 'я') || 

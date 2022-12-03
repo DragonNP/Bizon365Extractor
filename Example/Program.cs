@@ -1,15 +1,8 @@
 ﻿using Bizon365Extractor;
 
-while (true)
-{
-    string? url = Console.ReadLine();
-    if (url == null)
-    {
-        Console.WriteLine("Введите корректную ссылку");
-        continue;
-    }
-    string link = BizonExtractor.Extract(url).Result.HangoutsUrl;
+//string? url = Console.ReadLine();\
+string url = "https://start.bizon365.ru/room/nadintort/FerreroRoshe";
+Room room = BizonExtractor.Extract(url).Result;
 
-    Console.WriteLine(link);
-    break;
-}
+
+Console.WriteLine(room.HangoutsUrl);

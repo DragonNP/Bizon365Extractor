@@ -1,5 +1,4 @@
 ﻿using Newtonsoft.Json.Linq;
-using System.Linq;
 
 namespace Bizon365Extractor
 {
@@ -64,9 +63,7 @@ namespace Bizon365Extractor
             value = json["date"];
             if (value != null)
             {
-                room.Date = DateTime.ParseExact(value.ToString().Replace("T", " ").Replace("Z", ""),
-                    "yyyyMMdd HH:mm:ss.fff",
-                    System.Globalization.CultureInfo.InvariantCulture);
+                room.Date = DateTime.Parse(value.ToString());
             }
 
             value = json["hangoutsUrl"];

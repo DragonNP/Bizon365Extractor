@@ -5,7 +5,9 @@ VisualStudioVersion = 17.2.32630.192
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Bizon365Extractor", "Bizon365Extractor\Bizon365Extractor.csproj", "{E23E505B-67FF-4F5B-B3C5-2B556FA65EB0}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Example", "Example\Example.csproj", "{9199CB7B-307F-45CB-A5CC-149FC56A068B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Example", "Example\Example.csproj", "{9199CB7B-307F-45CB-A5CC-149FC56A068B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TelegramBot", "TelegramBot\TelegramBot.csproj", "{5FC22C77-47DF-4311-976D-C494DB75E08B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +23,10 @@ Global
 		{9199CB7B-307F-45CB-A5CC-149FC56A068B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9199CB7B-307F-45CB-A5CC-149FC56A068B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9199CB7B-307F-45CB-A5CC-149FC56A068B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5FC22C77-47DF-4311-976D-C494DB75E08B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5FC22C77-47DF-4311-976D-C494DB75E08B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5FC22C77-47DF-4311-976D-C494DB75E08B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5FC22C77-47DF-4311-976D-C494DB75E08B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
